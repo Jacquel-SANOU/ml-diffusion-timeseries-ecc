@@ -1,0 +1,35 @@
+# Core
+numpy>=1.24
+pandas>=2.0
+scipy>=1.11
+
+# ML / Deep Learning
+torch>=2.1
+scikit-learn>=1.3
+
+# Time series baselines
+statsmodels>=0.14
+arch>=6.2
+xgboost>=2.0
+lightgbm>=4.0
+
+# Probabilistic metrics
+properscoring>=0.1
+
+# Interpretability
+shap>=0.44
+
+# Data
+yfinance>=0.2
+
+# Visualization
+matplotlib>=3.7
+seaborn>=0.13
+plotly>=5.17
+
+# App
+streamlit>=1.28
+
+# Notebooks
+jupyter>=1.0
+ipykernel>=6.25
