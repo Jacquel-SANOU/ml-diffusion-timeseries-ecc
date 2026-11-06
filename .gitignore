@@ -16,22 +16,15 @@ env/
 
 # Jupyter
 .ipynb_checkpoints/
-*.ipynb_checkpoints
 
-# Data (large files — tracked via DVC or stored separately)
-*.csv
+# Raw data (large)
+data/raw/
 *.parquet
 *.h5
 *.hdf5
-*.pkl
-*.pickle
 
-# Model checkpoints (large)
-*.pt
-*.pth
-*.ckpt
-checkpoints/
-runs/
+# Model checkpoints (large .pth files)
+save/**/model_final.pth
 
 # Logs
 logs/
@@ -47,6 +40,5 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Results (keep only scripts, not outputs)
-results/figures/*.png
-results/figures/*.pdf
+# Course PDF (don't upload copyrighted material)
+Cours/

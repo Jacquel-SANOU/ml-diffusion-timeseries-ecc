@@ -16,6 +16,9 @@ lightgbm>=4.0
 # Probabilistic metrics
 properscoring>=0.1
 
+# Config
+pyyaml>=6.0
+
 # Interpretability
 shap>=0.44
 
