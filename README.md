@@ -36,7 +36,7 @@ Comparer plusieurs approches (dont les modeles de diffusion CSDI) pour :
 ├── 07_shap_interpretabilite.py  # SHAP XGBoost/LightGBM (figures 18-22)
 ├── 08_run_csdi_yahoo.py         # CSDI sur Yahoo Finance (figures 23-25)
 ├── 09_diebold_mariano.py        # Test statistique DM (figure 26)
-├── app.py                       # Application Streamlit
+├── app.py                       # Application Streamlit interactive
 ├── telecharger_brut.py          # Telechargement donnees Yahoo
 ├── CSDI/                        # Code source CSDI (Tashiro et al.)
 ├── config/                      # Configs YAML pour CSDI
@@ -52,16 +52,45 @@ Comparer plusieurs approches (dont les modeles de diffusion CSDI) pour :
 └── requirements.txt
 ```
 
+## Application Streamlit
+
+L'application interactive comprend 9 pages :
+
+| Page | Description |
+|------|-------------|
+| Accueil | Presentation du projet et de la methodologie |
+| Donnees Yahoo Finance | EDA : prix, log-rendements, correlations, split temporel |
+| Donnees Exchange Rate | EDA : series, correlations, normalisation |
+| Baselines (Prevision) | Resultats des 5 modeles de reference |
+| CSDI — Imputation | Resultats d'imputation avec courbes d'apprentissage |
+| Interpretabilite SHAP | Analyse SHAP : importance globale, par serie, par lag |
+| Comparaison globale | Synthese + test de Diebold-Mariano |
+| **Prevision interactive** | Prevision en prix reels avec intervalles de confiance (IC 80%) et explication SHAP |
+| **Imputation interactive** | Imputation CSDI en temps reel avec choix du masquage |
+
+### Prevision interactive
+
+- **2 modes** : backtest sur donnees passees ou prevision future (5 prochains jours)
+- **Prix reels** : conversion des log-rendements en prix (ex: "S&P 500 : 7623$")
+- **Intervalles de confiance** : regression quantile (quantiles 10%/50%/90%) pour XGBoost et LightGBM
+- **Explication SHAP** : pour chaque prevision, decomposition des contributions par serie et par lag
+
+### Imputation interactive
+
+- Choix du dataset, taux de masquage (10/30/50%) et type (aleatoire/bloc)
+- Le modele CSDI charge depuis le disque impute en direct (10 echantillons, 50 pas de diffusion)
+- Affichage avec intervalles de confiance (quantiles 10%-90% des echantillons)
+
 ## Modeles compares
 
-| Modele | Type | Tache |
-|---|---|---|
-| Naive (derniere valeur) | Baseline | Prevision |
-| ARIMA(1,0,0) | Classique | Prevision |
-| XGBoost (200 arbres) | ML | Prevision |
-| LightGBM (200 arbres) | ML | Prevision |
-| LSTM (64h, 2 couches) | Deep Learning | Prevision |
-| **CSDI** | **Diffusion** | **Imputation + Prevision** |
+| Modele | Type | Tache | Probabiliste |
+|---|---|---|---|
+| Naive (derniere valeur) | Baseline | Prevision | Non |
+| ARIMA(1,0,0) | Classique | Prevision | Non |
+| XGBoost (100 arbres) | ML | Prevision | Oui (regression quantile) |
+| LightGBM (100 arbres) | ML | Prevision | Oui (regression quantile) |
+| LSTM (64h, 2 couches) | Deep Learning | Prevision | Non |
+| **CSDI** | **Diffusion** | **Imputation + Prevision** | **Oui (echantillonnage natif)** |
 
 ## Metriques
 
@@ -88,10 +117,20 @@ Comparer plusieurs approches (dont les modeles de diffusion CSDI) pour :
 | 10% aleatoire | 0.0040 | 0.0020 | 0.0022 |
 | 50% bloc | 0.0206 | 0.0117 | 0.0129 |
 
-Le masquage bloc est ~3-4x plus difficile que l'aleatoire. La performance reste solide meme a 50% de donnees manquantes.
+### CSDI Imputation (Yahoo Finance)
+
+| Masquage | RMSE | MAE | CRPS |
+|----------|------|-----|------|
+| 10% aleatoire | 0.0167 | 0.0094 | 0.0066 |
+| 50% bloc | 0.0226 | 0.0126 | 0.0090 |
+
+Le masquage bloc est ~2-4x plus difficile que l'aleatoire. La performance reste solide meme a 50% de donnees manquantes.
 
 ### Interpretabilite SHAP
 Exxon est la serie la plus influente pour predire le S&P 500, suivie d'Apple et JPMorgan. Les lags recents (t-1, t-2) dominent.
+
+### Test de Diebold-Mariano
+Toutes les differences entre modeles sont statistiquement significatives (p < 0.01).
 
 ## Installation et execution
 
@@ -101,9 +140,9 @@ cd ml-diffusion-timeseries-ecc
 pip install -r requirements.txt
 
 # Lancer l'application Streamlit
-streamlit run app.py
+python -m streamlit run app.py
 
-# Reproduire les resultats
+# Reproduire les resultats (dans l'ordre)
 python 01_nettoyage_eda.py
 python 02_log_rendements_split.py
 python 03_exchange_rate_prep.py
