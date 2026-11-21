@@ -204,8 +204,8 @@ elif page == "CSDI — Imputation":
             st.markdown("""
             **Observations** :
             - Le masquage **bloc** est plus difficile que le masquage **aleatoire**
-            - CSDI bat le zero mais pas toujours l'interpolation lineaire sur Exchange Rate
-            - L'interpolation exploite la structure lisse des taux de change
+            - CSDI bat l'interpolation lineaire en masquage aleatoire sur Exchange Rate
+            - En masquage bloc, l'interpolation reprend l'avantage (series lisses, voisins fiables)
             """)
 
         show_figure("15_csdi_imputation_exemple.png",
@@ -332,7 +332,7 @@ elif page == "Comparaison globale":
     |--------|-------------|
     | **Baselines prevision** | Le predicteur zero (moyenne) bat tous les modeles appris en MAE |
     | **CSDI imputation (Yahoo)** | Surpasse le zero et l'interpolation lineaire |
-    | **CSDI imputation (Exch. Rate)** | Surpasse le zero mais pas l'interpolation lineaire |
+    | **CSDI imputation (Exch. Rate)** | Surpasse le zero et l'interpolation en aleatoire, pas en bloc |
     | **Bloc vs Aleatoire** | Masquage bloc plus difficile (pas de voisins proches) |
     | **Interpretabilite** | Importance SHAP repartie, ecarts faibles entre series — explique surtout du bruit |
     | **Approche probabiliste** | CSDI quantifie l'incertitude via echantillonnage (couverture a mesurer) |
@@ -898,7 +898,7 @@ elif page == "🧩 Imputation interactive":
         from diff_models import diff_CSDI
 
         SEQ_LENGTH = 100
-        N_SAMPLES = 50
+        N_SAMPLES = 10
         DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
         st.info(f"Device : **{DEVICE}**" + (" (GPU)" if DEVICE == "cuda" else " (CPU — plus lent)"))
