@@ -180,19 +180,32 @@ elif page == "CSDI — Imputation":
         st.subheader("Exchange Rate (8 devises)")
         show_figure("14_csdi_training_loss.png", "Courbe d'apprentissage")
 
-        results_path = "save/csdi_exchange_rate_20261106_111634/results_imputation.json"
-        if os.path.exists(results_path):
-            with open(results_path) as f:
+        er_dirs = sorted(glob_mod.glob("save/csdi_exchange_rate_*/results_imputation.json"))
+        if er_dirs:
+            with open(er_dirs[-1]) as f:
                 results = json.load(f)
             df_r = pd.DataFrame(results).T
             df_r.index.name = "Configuration"
             st.dataframe(df_r.round(6), use_container_width=True)
 
+            imp_bl_path = "results/baselines_imputation.json"
+            if os.path.exists(imp_bl_path):
+                with open(imp_bl_path) as f:
+                    imp_bl = json.load(f)
+                if "exchange_rate" in imp_bl:
+                    st.markdown("**Baselines d'imputation (comparaison) :**")
+                    rows = []
+                    for cfg, methods in imp_bl["exchange_rate"].items():
+                        for method, metrics in methods.items():
+                            rows.append({"Config": cfg, "Methode": method, **metrics})
+                    df_bl_imp = pd.DataFrame(rows)
+                    st.dataframe(df_bl_imp.round(6), use_container_width=True)
+
             st.markdown("""
             **Observations** :
             - Le masquage **bloc** est plus difficile que le masquage **aleatoire**
-            - La performance se degrade avec le taux de masquage
-            - A comparer avec les baselines d'imputation (zero, interpolation lineaire)
+            - CSDI bat le zero mais pas toujours l'interpolation lineaire sur Exchange Rate
+            - L'interpolation exploite la structure lisse des taux de change
             """)
 
         show_figure("15_csdi_imputation_exemple.png",
@@ -209,6 +222,19 @@ elif page == "CSDI — Imputation":
             df_r = pd.DataFrame(results).T
             df_r.index.name = "Configuration"
             st.dataframe(df_r.round(6), use_container_width=True)
+
+        imp_bl_path = "results/baselines_imputation.json"
+        if os.path.exists(imp_bl_path):
+            with open(imp_bl_path) as f:
+                imp_bl = json.load(f)
+            if "yahoo" in imp_bl:
+                st.markdown("**Baselines d'imputation (comparaison) :**")
+                rows = []
+                for cfg, methods in imp_bl["yahoo"].items():
+                    for method, metrics in methods.items():
+                        rows.append({"Config": cfg, "Methode": method, **metrics})
+                df_bl_imp = pd.DataFrame(rows)
+                st.dataframe(df_bl_imp.round(6), use_container_width=True)
 
         show_figure("24_csdi_yahoo_imputation.png",
                      "Exemple d'imputation (30% masquage aleatoire)")
@@ -245,9 +271,9 @@ elif page == "Interpretabilite SHAP":
 
         st.markdown("""
         **Resultats cles** :
-        - **Exxon** est la serie la plus influente pour predire le S&P 500
-        - Les lags recents (t-1, t-2) sont les plus importants
-        - L'impact decroit exponentiellement avec le lag
+        - **Exxon** est en tete des deux modeles, mais les ecarts d'importance entre series sont faibles
+        - L'importance est repartie sur l'ensemble des lags, sans decroissance nette
+        - Ces modeles ne battant pas le predicteur zero, SHAP explique principalement du bruit
         """)
 
     with tab3:
@@ -268,8 +294,9 @@ elif page == "Comparaison globale":
         st.dataframe(df_bl.round(4), use_container_width=True)
 
     st.markdown("### CSDI — Imputation (Exchange Rate)")
-    er_path = "save/csdi_exchange_rate_20261106_111634/results_imputation.json"
-    if os.path.exists(er_path):
+    er_result_dirs = sorted(glob_mod.glob("save/csdi_exchange_rate_*/results_imputation.json"))
+    er_path = er_result_dirs[-1] if er_result_dirs else ""
+    if er_path and os.path.exists(er_path):
         with open(er_path) as f:
             er = json.load(f)
         df_er = pd.DataFrame(er).T
@@ -303,16 +330,22 @@ elif page == "Comparaison globale":
     ### Synthese
     | Aspect | Observation |
     |--------|-------------|
-    | **Baselines prevision** | LightGBM meilleur, mais le zero est un concurrent fort |
-    | **CSDI imputation** | Surpasse le zero sur Yahoo, proche de l'interpolation sur Exchange Rate |
+    | **Baselines prevision** | Le predicteur zero (moyenne) bat tous les modeles appris en MAE |
+    | **CSDI imputation (Yahoo)** | Surpasse le zero et l'interpolation lineaire |
+    | **CSDI imputation (Exch. Rate)** | Surpasse le zero mais pas l'interpolation lineaire |
     | **Bloc vs Aleatoire** | Masquage bloc plus difficile (pas de voisins proches) |
-    | **Interpretabilite** | Exxon et les lags recents dominent (SHAP) |
-    | **Approche probabiliste** | CSDI fournit des intervalles de confiance natifs (CRPS) |
+    | **Interpretabilite** | Importance SHAP repartie, ecarts faibles entre series — explique surtout du bruit |
+    | **Approche probabiliste** | CSDI quantifie l'incertitude via echantillonnage (couverture a mesurer) |
 
     ### Points forts du modele CSDI
-    1. **Flexibilite** : meme architecture pour imputation et prevision
-    2. **Incertitude** : quantification native via echantillonnage
-    3. **Multivarite** : capture les dependances entre series
+    1. **Imputation multivariee** : capture les dependances entre series pour reconstruire les manquants
+    2. **Incertitude** : quantification native via echantillonnage (N echantillons → intervalles)
+    3. **Flexibilite** : meme architecture pour differents schemas de masquage
+
+    ### Limites
+    - Prevision par diffusion (CRPS, couverture) non realisee dans le temps imparti
+    - Rendements financiers quasi bruit blanc : peu de signal exploitable en prevision
+    - Gaussienne conditionnelle non testee comme baseline d'imputation
     """)
 
 
@@ -825,7 +858,8 @@ elif page == "🧩 Imputation interactive":
                                  format_func=lambda x: "Aleatoire" if x == "random" else "Bloc")
 
     if dataset_imp == "Exchange Rate":
-        model_path = "save/csdi_exchange_rate_20261106_111634/model_best.pth"
+        er_model_dirs = sorted(glob_mod.glob("save/csdi_exchange_rate_*/model_best.pth"))
+        model_path = er_model_dirs[-1] if er_model_dirs else ""
         data_folder = "data/csdi_exchange_rate"
         config_path = "config/exchange_rate.yaml"
         target_dim = 8
@@ -855,11 +889,16 @@ elif page == "🧩 Imputation interactive":
         import yaml
         from torch.utils.data import Dataset, DataLoader
 
+        np.random.seed(42)
+        torch.manual_seed(42)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(42)
+
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "CSDI"))
         from diff_models import diff_CSDI
 
         SEQ_LENGTH = 100
-        N_SAMPLES = 10
+        N_SAMPLES = 50
         DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
         st.info(f"Device : **{DEVICE}**" + (" (GPU)" if DEVICE == "cuda" else " (CPU — plus lent)"))
