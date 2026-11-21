@@ -928,7 +928,7 @@ Les IC \`a 80\% affich\'es sur les figures~\ref{fig:csdi_imputation_er} et~\ref{
 \end{table}
 
 \begin{remarque}[Interpr\'etation des baselines]
-Sur Exchange Rate (donn\'ees brutes normalis\'ees), l'interpolation lin\'eaire est tr\`es comp\'etitive car les s\'eries sont lisses. CSDI reste proche. Sur Yahoo Finance (log-rendements normalis\'es, centr\'es en 0), le baseline z\'ero est meilleur que l'interpolation car les log-rendements sont quasi-stationnaires. CSDI am\'eliore significativement le z\'ero sur Yahoo.
+Sur Exchange Rate (donn\'ees brutes normalis\'ees), CSDI bat l'interpolation lin\'eaire en masquage al\'eatoire (RMSE 0.0035 vs 0.0040) mais l'interpolation reprend l'avantage en masquage bloc (s\'eries lisses, voisins fiables). Sur Yahoo Finance (log-rendements normalis\'es, centr\'es en 0), le baseline z\'ero est meilleur que l'interpolation car les log-rendements sont quasi-stationnaires. CSDI am\'eliore significativement le z\'ero sur Yahoo (RMSE 0.0205 vs 0.0275).
 \end{remarque}
 
 \begin{figure}[H]
@@ -1022,7 +1022,7 @@ Le test de Diebold-Mariano est appliqu\'e \`a toutes les paires de 6 mod\`eles (
     \item \textbf{Flexibilit\'e} : CSDI peut th\'eoriquement g\'erer imputation et pr\'evision dans un cadre unifi\'e (la pr\'evision \'etant formul\'ee comme une imputation des positions futures). \textbf{Limite :} dans ce projet, nous n'avons \'evalu\'e CSDI que sur la t\^ache d'imputation ; la pr\'evision probabiliste par diffusion n'a pas \'et\'e impl\'ement\'ee, et les baselines de pr\'evision (Table~3) ne sont donc pas directement comparables \`a CSDI
     \item \textbf{Quantification native de l'incertitude} : les intervalles de confiance d\'ecoulent directement de l'\'echantillonnage, sans hypoth\`ese param\'etrique suppl\'ementaire
     \item \textbf{Capture des d\'ependances multivari\'ees} : l'architecture \`a attention mod\'elise les corr\'elations entre s\'eries
-    \item \textbf{Comportement selon le masquage} : en mode al\'eatoire, la performance se d\'egrade l\'eg\`erement avec le taux de masquage (RMSE Yahoo : 0.0167 \`a 10\% $\to$ 0.0182 \`a 50\%). En mode bloc, le RMSE reste stable (0.0228 $\to$ 0.0226), sugg\'erant que le mod\`ele exploite peu la longueur du contexte restant
+    \item \textbf{Comportement selon le masquage} : en mode al\'eatoire, la performance se d\'egrade l\'eg\`erement avec le taux de masquage (RMSE Yahoo : 0.0198 \`a 10\% $\to$ 0.0220 \`a 50\%). En mode bloc, le RMSE reste stable (0.0276 $\to$ 0.0284), sugg\'erant que le mod\`ele exploite peu la longueur du contexte restant
 \end{enumerate}
 
 \subsection{Limites}
@@ -1068,7 +1068,7 @@ Ce projet a explor\'e l'application des mod\`eles de diffusion conditionnels (CS
     \item Une application Streamlit interactive pour la d\'emonstration
 \end{itemize}
 
-Les r\'esultats montrent que CSDI bat le z\'ero et l'interpolation lin\'eaire sur Yahoo Finance (log-rendements volatils, RMSE 0.0205 vs z\'ero 0.0275), mais \textbf{pas} l'interpolation sur Exchange Rate (donn\'ees lisses, interpolation RMSE 0.0040 vs CSDI 0.0035). L'avantage de CSDI appara\^it donc principalement sur des donn\'ees volatiles o\`u les baselines simples \'echouent.
+Les r\'esultats montrent que CSDI bat le z\'ero et l'interpolation lin\'eaire sur Yahoo Finance (log-rendements volatils, RMSE 0.0205 vs z\'ero 0.0275) \textbf{et} l'interpolation sur Exchange Rate en masquage al\'eatoire (RMSE 0.0035 vs interpolation 0.0040). En masquage bloc \`a 30\%, l'interpolation reprend l'avantage sur Exchange Rate (0.0108 vs CSDI 0.0126), montrant que CSDI excelle sur les masquages dispers\'es mais p\^atit des longues lacunes sur des s\'eries lisses.
 
 \textbf{Limites principales :} l'objectif de pr\'evision probabiliste par diffusion n'a pas \'et\'e r\'ealis\'e (seule l'imputation est \'evalu\'ee pour CSDI), la calibration des intervalles de confiance n'a pas \'et\'e v\'erifi\'ee empiriquement, et les queues \'epaisses des distributions financi\`eres ne sont pas mod\'elis\'ees explicitement.
 
