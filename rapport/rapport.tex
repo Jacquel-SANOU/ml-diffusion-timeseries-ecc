@@ -851,12 +851,12 @@ Ce r\'esultat est attendu pour des log-rendements normalis\'es de s\'eries finan
 \toprule
 \textbf{Configuration} & \textbf{RMSE} & \textbf{MAE} & \textbf{CRPS} \\
 \midrule
-10\% al\'eatoire & 0.0040 & 0.0020 & 0.0022 \\
-10\% bloc & 0.0098 & 0.0050 & 0.0053 \\
-30\% al\'eatoire & 0.0056 & 0.0029 & 0.0028 \\
-30\% bloc & 0.0148 & 0.0079 & 0.0085 \\
-50\% al\'eatoire & 0.0068 & 0.0036 & 0.0033 \\
-50\% bloc & 0.0206 & 0.0117 & 0.0129 \\
+10\% al\'eatoire & 0.0030 & 0.0017 & 0.0019 \\
+10\% bloc & 0.0073 & 0.0045 & 0.0051 \\
+30\% al\'eatoire & 0.0035 & 0.0019 & 0.0022 \\
+30\% bloc & 0.0126 & 0.0078 & 0.0088 \\
+50\% al\'eatoire & 0.0041 & 0.0023 & 0.0026 \\
+50\% bloc & 0.0154 & 0.0096 & 0.0107 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -888,12 +888,12 @@ Les IC \`a 80\% affich\'es sur les figures~\ref{fig:csdi_imputation_er} et~\ref{
 \toprule
 \textbf{Configuration} & \textbf{RMSE} & \textbf{MAE} & \textbf{CRPS} \\
 \midrule
-10\% al\'eatoire & 0.0167 & 0.0094 & 0.0066 \\
-10\% bloc & 0.0228 & 0.0127 & 0.0091 \\
-30\% al\'eatoire & 0.0177 & 0.0100 & 0.0070 \\
-30\% bloc & 0.0230 & 0.0128 & 0.0092 \\
-50\% al\'eatoire & 0.0182 & 0.0103 & 0.0072 \\
-50\% bloc & 0.0226 & 0.0126 & 0.0090 \\
+10\% al\'eatoire & 0.0198 & 0.0110 & 0.0076 \\
+10\% bloc & 0.0276 & 0.0140 & 0.0101 \\
+30\% al\'eatoire & 0.0205 & 0.0113 & 0.0078 \\
+30\% bloc & 0.0280 & 0.0142 & 0.0103 \\
+50\% al\'eatoire & 0.0220 & 0.0118 & 0.0083 \\
+50\% bloc & 0.0284 & 0.0142 & 0.0103 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -917,12 +917,12 @@ Les IC \`a 80\% affich\'es sur les figures~\ref{fig:csdi_imputation_er} et~\ref{
 \multirow{3}{*}{Exchange Rate}
   & Z\'ero (moyenne) & 0.1228 & 0.0847 \\
   & Interpolation lin. & 0.0040 & 0.0023 \\
-  & \textbf{CSDI} & \textbf{0.0056} & \textbf{0.0029} \\
+  & \textbf{CSDI} & \textbf{0.0035} & \textbf{0.0019} \\
 \midrule
 \multirow{3}{*}{Yahoo Finance}
   & Z\'ero (moyenne) & 0.0275 & 0.0136 \\
   & Interpolation lin. & 0.0353 & 0.0176 \\
-  & \textbf{CSDI} & \textbf{0.0177} & \textbf{0.0100} \\
+  & \textbf{CSDI} & \textbf{0.0205} & \textbf{0.0113} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1068,7 +1068,7 @@ Ce projet a explor\'e l'application des mod\`eles de diffusion conditionnels (CS
     \item Une application Streamlit interactive pour la d\'emonstration
 \end{itemize}
 
-Les r\'esultats montrent que CSDI bat le z\'ero et l'interpolation lin\'eaire sur Yahoo Finance (log-rendements volatils), mais \textbf{pas} l'interpolation sur Exchange Rate (donn\'ees lisses, interpolation RMSE 0.0040 vs CSDI 0.0056). L'avantage de CSDI appara\^it donc principalement sur des donn\'ees volatiles o\`u les baselines simples \'echouent.
+Les r\'esultats montrent que CSDI bat le z\'ero et l'interpolation lin\'eaire sur Yahoo Finance (log-rendements volatils, RMSE 0.0205 vs z\'ero 0.0275), mais \textbf{pas} l'interpolation sur Exchange Rate (donn\'ees lisses, interpolation RMSE 0.0040 vs CSDI 0.0035). L'avantage de CSDI appara\^it donc principalement sur des donn\'ees volatiles o\`u les baselines simples \'echouent.
 
 \textbf{Limites principales :} l'objectif de pr\'evision probabiliste par diffusion n'a pas \'et\'e r\'ealis\'e (seule l'imputation est \'evalu\'ee pour CSDI), la calibration des intervalles de confiance n'a pas \'et\'e v\'erifi\'ee empiriquement, et les queues \'epaisses des distributions financi\`eres ne sont pas mod\'elis\'ees explicitement.
 
