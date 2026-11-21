@@ -365,7 +365,7 @@ if __name__ == "__main__":
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     DATA_FOLDER = "data/csdi_exchange_rate"
     CONFIG_PATH = "config/exchange_rate.yaml"
-    N_SAMPLES = 50
+    N_SAMPLES = int(os.environ.get("N_SAMPLES", 50))
     SEQ_LENGTH = 100
 
     with open(CONFIG_PATH, "r") as f:

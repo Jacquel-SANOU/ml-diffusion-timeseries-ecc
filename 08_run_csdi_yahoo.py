@@ -25,7 +25,7 @@ if torch.cuda.is_available():
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 SEQ_LENGTH = 100
-N_SAMPLES = 50
+N_SAMPLES = int(os.environ.get("N_SAMPLES", 50))
 
 N_TRAIN = 2734
 N_VAL = 501
