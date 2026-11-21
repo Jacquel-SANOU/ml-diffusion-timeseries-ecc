@@ -356,10 +356,16 @@ if __name__ == "__main__":
                         help="Path to saved model folder (skip training)")
     args = parser.parse_args()
 
+    SEED = 42
+    np.random.seed(SEED)
+    torch.manual_seed(SEED)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(SEED)
+
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     DATA_FOLDER = "data/csdi_exchange_rate"
     CONFIG_PATH = "config/exchange_rate.yaml"
-    N_SAMPLES = 10
+    N_SAMPLES = 50
     SEQ_LENGTH = 100
 
     with open(CONFIG_PATH, "r") as f:
@@ -452,11 +458,8 @@ if __name__ == "__main__":
             test_loader = DataLoader(test_ds, batch_size=4, shuffle=False)
 
             all_rmse, all_mae, all_crps = [], [], []
-            max_eval_batches = 20
 
             for batch_idx, batch in enumerate(test_loader):
-                if batch_idx >= max_eval_batches:
-                    break
                 samples, target, target_mask, obs_mask = model.evaluate_batch(batch, N_SAMPLES)
                 rmse, mae, crps = calc_metrics(samples, target, target_mask, mean_t, std_t)
                 all_rmse.append(rmse)

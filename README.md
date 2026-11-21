@@ -32,7 +32,8 @@ Comparer plusieurs approches (dont les modeles de diffusion CSDI) pour :
 ├── 04_prepare_csdi_data.py      # Conversion en format CSDI (pickle)
 ├── 05_run_csdi_exchange_rate.py # CSDI sur Exchange Rate (figure 14)
 ├── 05c_csdi_figure.py           # Generation figure 15 standalone
-├── 06_baselines_forecasting.py  # 5 baselines (figures 16-17)
+├── 06_baselines_forecasting.py  # 6 baselines + zero (figures 16-17)
+├── 07_baselines_imputation.py   # Baselines imputation (zero, interpolation)
 ├── 07_shap_interpretabilite.py  # SHAP XGBoost/LightGBM (figures 18-22)
 ├── 08_run_csdi_yahoo.py         # CSDI sur Yahoo Finance (figures 23-25)
 ├── 09_diebold_mariano.py        # Test statistique DM (figure 26)
@@ -85,8 +86,10 @@ L'application interactive comprend 9 pages :
 
 | Modele | Type | Tache | Probabiliste |
 |---|---|---|---|
+| Zero (moyenne) | Baseline | Prevision + Imputation | Non |
 | Naive (derniere valeur) | Baseline | Prevision | Non |
 | ARIMA(1,0,0) | Classique | Prevision | Non |
+| Interpolation lineaire | Baseline | Imputation | Non |
 | XGBoost (100 arbres) | ML | Prevision | Oui (regression quantile) |
 | LightGBM (100 arbres) | ML | Prevision | Oui (regression quantile) |
 | LSTM (64h, 2 couches) | Deep Learning | Prevision | Non |
@@ -124,13 +127,13 @@ L'application interactive comprend 9 pages :
 | 10% aleatoire | 0.0167 | 0.0094 | 0.0066 |
 | 50% bloc | 0.0226 | 0.0126 | 0.0090 |
 
-Le masquage bloc est ~2-4x plus difficile que l'aleatoire. La performance reste solide meme a 50% de donnees manquantes.
+Le masquage bloc est plus difficile que l'aleatoire. Sur Yahoo (log-rendements), CSDI surpasse le baseline zero ; sur Exchange Rate (donnees lisses), l'interpolation lineaire est competitive.
 
 ### Interpretabilite SHAP
 Exxon est la serie la plus influente pour predire le S&P 500, suivie d'Apple et JPMorgan. Les lags recents (t-1, t-2) dominent.
 
 ### Test de Diebold-Mariano
-Toutes les differences entre modeles sont statistiquement significatives (p < 0.01).
+Le test DM compare toutes les paires de modeles (incluant Zero et ARIMA) avec correction HAC.
 
 ## Installation et execution
 
@@ -149,6 +152,7 @@ python 03_exchange_rate_prep.py
 python 04_prepare_csdi_data.py
 python 05_run_csdi_exchange_rate.py
 python 06_baselines_forecasting.py
+python 07_baselines_imputation.py
 python 07_shap_interpretabilite.py
 python 08_run_csdi_yahoo.py
 python 09_diebold_mariano.py

@@ -34,6 +34,11 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 
+np.random.seed(42)
+torch.manual_seed(42)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(42)
+
 import xgboost as xgb
 import lightgbm as lgb
 from statsmodels.tsa.arima.model import ARIMA
@@ -100,7 +105,15 @@ print(f"  Test  : X={X_test.shape}, Y={Y_test.shape}")
 
 
 # =====================================================================
-# 3. BASELINE NAIVE (derniere valeur repetee)
+# 3a. BASELINE ZERO (predit toujours 0 — log-rendements normalises)
+# =====================================================================
+print("\n--- Baseline Zero ---")
+Y_pred_zero = np.zeros_like(Y_test)
+res_zero = evaluate_forecast(Y_test, Y_pred_zero, "Zero")
+print(f"  MAE={res_zero['MAE']:.6f}, RMSE={res_zero['RMSE']:.6f}")
+
+# =====================================================================
+# 3b. BASELINE NAIVE (derniere valeur repetee)
 # =====================================================================
 print("\n--- Baseline Naive ---")
 Y_pred_naive = np.repeat(X_test[:, -1:, :], HORIZON, axis=1)
@@ -111,23 +124,20 @@ print(f"  MAE={res_naive['MAE']:.6f}, RMSE={res_naive['RMSE']:.6f}")
 # =====================================================================
 # 4. ARIMA (par serie, prevision sur la premiere serie seulement pour rapidite)
 # =====================================================================
-print("\n--- ARIMA (rolling, echantillon) ---")
+print("\n--- ARIMA (rolling, refit par fenetre) ---")
 sp500_idx = series_names.index("S&P 500") if "S&P 500" in series_names else 0
 
 Y_pred_arima_all = np.copy(Y_pred_naive)
 
-sample_step = 50
 for s_idx in range(len(series_names)):
     s_name = series_names[s_idx]
-    for i in range(0, len(X_test), sample_step):
+    for i in range(len(X_test)):
         history = X_test[i, :, s_idx]
         try:
             model = ARIMA(history, order=(1, 0, 0))
             fit = model.fit()
             fc = fit.forecast(steps=HORIZON)
-            end = min(i + sample_step, len(X_test))
-            for j in range(i, end):
-                Y_pred_arima_all[j, :, s_idx] = fc
+            Y_pred_arima_all[i, :, s_idx] = fc
         except Exception:
             pass
     print(f"  {s_name} : done")
@@ -281,7 +291,7 @@ print("\n" + "=" * 60)
 print("RESULTATS — COMPARAISON DES BASELINES")
 print("=" * 60)
 
-results = [res_naive, res_arima, res_xgb, res_lgb, res_lstm]
+results = [res_zero, res_naive, res_arima, res_xgb, res_lgb, res_lstm]
 results_df = pd.DataFrame(results).set_index("Modele")
 print(results_df.round(6).to_string())
 
@@ -300,7 +310,7 @@ fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 models_names = results_df.index.tolist()
 mae_vals = results_df["MAE"].values
 rmse_vals = results_df["RMSE"].values
-colors = ["#95a5a6", "#e67e22", "#3498db", "#2ecc71", "#9b59b6"]
+colors = ["#e74c3c", "#95a5a6", "#e67e22", "#3498db", "#2ecc71", "#9b59b6"]
 
 ax = axes[0]
 bars = ax.barh(models_names, mae_vals, color=colors)
@@ -327,12 +337,13 @@ print("\n>>> FIGURE 16 sauvegardee : results/figures/16_baselines_comparaison.pn
 # =====================================================================
 # 10. FIGURE — Exemple de prevision (S&P 500)
 # =====================================================================
-fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+fig, axes = plt.subplots(2, 4, figsize=(22, 10))
 axes = axes.flatten()
 
 sample_idx = len(X_test) // 2
 
 preds_dict = {
+    "Zero": Y_pred_zero,
     "Naive": Y_pred_naive,
     "ARIMA": Y_pred_arima_all,
     "XGBoost": Y_pred_xgb,
@@ -359,6 +370,9 @@ for i, (name, preds) in enumerate(preds_dict.items()):
     ax.set_title(name, fontweight="bold")
     ax.legend(fontsize=9)
     ax.grid(alpha=0.3)
+
+if len(axes) > len(preds_dict) + 1:
+    axes[-1].set_visible(False)
 
 fig.suptitle(f"Prevision a H={HORIZON} jours — S&P 500 (log-rendements normalises)",
              fontsize=14, fontweight="bold", y=1.02)

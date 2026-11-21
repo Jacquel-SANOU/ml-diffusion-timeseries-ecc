@@ -17,9 +17,15 @@ from torch.utils.data import Dataset, DataLoader
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "CSDI"))
 from diff_models import diff_CSDI
 
+SEED = 42
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(SEED)
+
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 SEQ_LENGTH = 100
-N_SAMPLES = 10
+N_SAMPLES = 50
 
 N_TRAIN = 2734
 N_VAL = 501
@@ -346,7 +352,6 @@ if __name__ == "__main__":
     # ── Evaluation imputation ──
     print("\n--- Evaluation sur le test ---")
     model.eval()
-    max_eval_batches = 20
     results = {}
 
     for ratio in [0.1, 0.3, 0.5]:
@@ -359,8 +364,6 @@ if __name__ == "__main__":
 
             all_rmse, all_mae, all_crps = [], [], []
             for bi, batch in enumerate(test_loader):
-                if bi >= max_eval_batches:
-                    break
                 samples, target, target_mask, obs_mask = model.evaluate_batch(batch, N_SAMPLES)
                 rmse, mae, crps = calc_metrics(
                     samples, target, target_mask, mean_data, std_data

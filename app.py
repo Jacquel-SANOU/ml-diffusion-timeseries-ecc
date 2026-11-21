@@ -71,19 +71,19 @@ if page == "Accueil":
 
     ### Methodologie
     1. **Preprocessing** : log-rendements, normalisation sur train uniquement
-    2. **Baselines** : Naive, ARIMA, XGBoost, LightGBM, LSTM
+    2. **Baselines** : Zero, Naive, ARIMA, XGBoost, LightGBM, LSTM
     3. **CSDI** : Modele de diffusion conditionnel avec masquage
-    4. **Evaluation** : CRPS (probabiliste), MAE, RMSE
+    4. **Evaluation** : CRPS (probabiliste), MAE, RMSE + baselines d'imputation
     5. **Interpretabilite** : SHAP (TreeExplainer)
 
     ### Architecture CSDI
-    - Encodeur Transformer (4 couches, 8 tetes)
+    - Attention bidirectionnelle (temporelle + inter-series, 4 couches, 8 tetes)
     - 50 pas de diffusion (schedule quadratique)
     - Embedding temporel + embedding par feature
     """)
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("Modeles compares", "6")
+    col1.metric("Modeles compares", "7")
     col2.metric("Series analysees", "17")
     col3.metric("Configurations masquage", "6")
 
@@ -142,9 +142,10 @@ elif page == "Baselines (Prevision)":
     st.markdown("""
     **Configuration** : Lookback L=20, Horizon H=5, sur log-rendements normalises.
 
-    Cinq modeles de reference :
+    Six modeles de reference :
+    - **Zero** : predit toujours 0 (la moyenne des log-rendements normalises)
     - **Naive** : derniere valeur observee
-    - **ARIMA(1,0,0)** : autoregression simple
+    - **ARIMA(1,0,0)** : autoregression simple (refit par fenetre)
     - **XGBoost** : gradient boosting (200 arbres)
     - **LightGBM** : gradient boosting (200 arbres)
     - **LSTM** : reseau recurrent (64 hidden, 2 couches, 50 epochs)
@@ -189,9 +190,9 @@ elif page == "CSDI — Imputation":
 
             st.markdown("""
             **Observations** :
-            - Le masquage **bloc** est systematiquement plus difficile que le masquage **aleatoire**
-            - La performance se degrade graduellement avec le taux de masquage
-            - Meme a 50% de donnees manquantes, CSDI produit des imputations coherentes
+            - Le masquage **bloc** est plus difficile que le masquage **aleatoire**
+            - La performance se degrade avec le taux de masquage
+            - A comparer avec les baselines d'imputation (zero, interpolation lineaire)
             """)
 
         show_figure("15_csdi_imputation_exemple.png",
@@ -302,17 +303,16 @@ elif page == "Comparaison globale":
     ### Synthese
     | Aspect | Observation |
     |--------|-------------|
-    | **Meilleur baseline** | LightGBM (MAE=0.663, RMSE=0.940) |
-    | **CSDI imputation** | Excellente performance meme a 50% masquage |
-    | **Bloc vs Aleatoire** | Masquage bloc ~3-4x plus difficile |
-    | **Interpretabilite** | Exxon et les lags recents dominent |
-    | **Approche probabiliste** | CSDI fournit des intervalles de confiance (CRPS) |
+    | **Baselines prevision** | LightGBM meilleur, mais le zero est un concurrent fort |
+    | **CSDI imputation** | Surpasse le zero sur Yahoo, proche de l'interpolation sur Exchange Rate |
+    | **Bloc vs Aleatoire** | Masquage bloc plus difficile (pas de voisins proches) |
+    | **Interpretabilite** | Exxon et les lags recents dominent (SHAP) |
+    | **Approche probabiliste** | CSDI fournit des intervalles de confiance natifs (CRPS) |
 
-    ### Avantages du modele CSDI
+    ### Points forts du modele CSDI
     1. **Flexibilite** : meme architecture pour imputation et prevision
     2. **Incertitude** : quantification native via echantillonnage
     3. **Multivarite** : capture les dependances entre series
-    4. **Robustesse** : performance stable meme avec beaucoup de donnees manquantes
     """)
 
 
@@ -994,6 +994,8 @@ elif page == "🧩 Imputation interactive":
                     target_mask = observed_mask - cond_mask
                     side_info = self.get_side_info(observed_tp, cond_mask)
                     samples = self.impute(observed_data, cond_mask, side_info, n_samples)
+                    for i in range(n_samples):
+                        samples[:, i] = cond_mask * observed_data + (1 - cond_mask) * samples[:, i]
                 return samples, observed_data, target_mask, observed_mask
 
         with st.spinner("Chargement du modele CSDI..."):
@@ -1071,9 +1073,13 @@ elif page == "🧩 Imputation interactive":
 
             masked_idx = np.where(mask_i > 0)[0]
             if len(masked_idx) > 0:
-                ax.scatter(masked_idx, true_val[masked_idx], color="red", s=10, zorder=5, label="Masque")
-                ax.plot(t_vals, median_pred, color="#3498db", linewidth=0.8, alpha=0.7, label="Mediane CSDI")
-                ax.fill_between(t_vals, q10, q90, alpha=0.2, color="#3498db", label="IC 80%")
+                for s_idx in range(samples_np.shape[0]):
+                    sample_s = samples_np[s_idx, i, :]
+                    ax.plot(t_vals[masked_idx], sample_s[masked_idx], color="#85c1e9", linewidth=0.4, alpha=0.3,
+                            label="Echantillons" if s_idx == 0 else None)
+                ax.fill_between(t_vals, q10, q90, alpha=0.3, color="#85c1e9", label="IC 80%", zorder=2)
+                ax.plot(t_vals, median_pred, color="#2471a3", linewidth=1.2, alpha=0.9, label="Mediane CSDI", zorder=3)
+                ax.scatter(masked_idx, true_val[masked_idx], color="red", s=15, zorder=6, label="Masque")
 
             ax.set_title(series_names_csdi[i], fontweight="bold")
             ax.grid(alpha=0.3)

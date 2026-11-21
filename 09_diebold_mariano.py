@@ -50,13 +50,20 @@ for X, Y in windows:
     naive_errors.append(((pred - Y)**2).mean())
 naive_errors = np.array(naive_errors)
 
-# ── ARIMA (simplified AR(1)) ───────────────────────────
+# ── Zero baseline ─────────────────────────────────────
+zero_errors = []
+for X, Y in windows:
+    pred = np.zeros_like(Y)
+    zero_errors.append(((pred - Y)**2).mean())
+zero_errors = np.array(zero_errors)
+
+# ── ARIMA (AR(1), refit par fenetre) ──────────────────
 from statsmodels.tsa.ar_model import AutoReg
+import warnings
+warnings.filterwarnings("ignore")
 
 arima_errors = []
-sample_idx = list(range(0, len(windows), 50))
-for idx in sample_idx:
-    X, Y = windows[idx]
+for wi, (X, Y) in enumerate(windows):
     preds = []
     for col in range(n_features):
         try:
@@ -67,6 +74,8 @@ for idx in sample_idx:
             preds.append(np.full(H, X[-1, col]))
     preds = np.array(preds).T
     arima_errors.append(((preds - Y)**2).mean())
+    if (wi + 1) % 200 == 0:
+        print(f"  ARIMA : {wi+1}/{len(windows)}")
 arima_errors = np.array(arima_errors)
 
 # ── XGBoost ────────────────────────────────────────────
@@ -170,9 +179,11 @@ def diebold_mariano(e1, e2, h=1):
     p_value = 2 * (1 - stats.norm.cdf(abs(dm_stat)))
     return dm_stat, p_value
 
-model_names = ["Naive", "XGBoost", "LightGBM", "LSTM"]
+model_names = ["Zero", "Naive", "ARIMA", "XGBoost", "LightGBM", "LSTM"]
 model_errors = {
+    "Zero": zero_errors,
     "Naive": naive_errors,
+    "ARIMA": arima_errors,
     "XGBoost": xgb_errors,
     "LightGBM": lgb_errors,
     "LSTM": lstm_errors,

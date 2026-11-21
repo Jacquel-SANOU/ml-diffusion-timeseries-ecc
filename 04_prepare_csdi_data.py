@@ -28,8 +28,10 @@ df["date"] = pd.to_datetime(df["date"])
 df = df.set_index("date")
 data = df.values.astype(np.float32)
 
-mean_data = data.mean(axis=0)
-std_data = data.std(axis=0)
+# C1 FIX : mean/std sur le TRAIN seul (80% premiers jours)
+n_train_er = int(len(data) * 0.8)
+mean_data = data[:n_train_er].mean(axis=0)
+std_data = data[:n_train_er].std(axis=0)
 mask_data = np.ones_like(data, dtype=np.float32)
 
 print(f"\nExchange Rate :")
@@ -54,8 +56,11 @@ os.makedirs(out_dir_yahoo, exist_ok=True)
 log_ret = pd.read_csv("data/processed/yahoo_log_returns.csv", index_col="Date", parse_dates=True)
 data_yahoo = log_ret.values.astype(np.float32)
 
-mean_yahoo = data_yahoo.mean(axis=0)
-std_yahoo = data_yahoo.std(axis=0)
+# C1 FIX : mean/std sur le TRAIN seul (avant 2021-01-01 = 2734 premiers jours)
+train_yahoo = log_ret[log_ret.index < "2021-01-01"]
+n_train_yahoo = len(train_yahoo)
+mean_yahoo = data_yahoo[:n_train_yahoo].mean(axis=0)
+std_yahoo = data_yahoo[:n_train_yahoo].std(axis=0)
 mask_yahoo = np.ones_like(data_yahoo, dtype=np.float32)
 
 print(f"\nYahoo Finance (log-rendements) :")
