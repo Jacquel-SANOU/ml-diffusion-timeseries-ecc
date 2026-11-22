@@ -17,8 +17,9 @@ env/
 # Jupyter
 .ipynb_checkpoints/
 
-# Raw data (large)
+# Raw data (large, regenerable via telecharger_brut.py)
 data/raw/
+yahoo_brut.csv
 *.parquet
 *.h5
 *.hdf5
