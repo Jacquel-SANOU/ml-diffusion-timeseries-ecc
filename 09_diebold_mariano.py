@@ -90,7 +90,7 @@ for i in range(len(train_vals) - L - H + 1):
 X_train_arr = np.array(X_train_list)
 Y_train_arr = np.array(Y_train_list)
 
-xgb_model = xgb.XGBRegressor(n_estimators=200, max_depth=5, learning_rate=0.05,
+xgb_model = xgb.XGBRegressor(n_estimators=100, max_depth=4, learning_rate=0.05,
                                n_jobs=-1, random_state=42, verbosity=0,
                                multi_strategy="multi_output_tree")
 xgb_model.fit(X_train_arr, Y_train_arr)
@@ -105,7 +105,7 @@ xgb_errors = np.array(xgb_errors)
 import lightgbm as lgb
 from sklearn.multioutput import MultiOutputRegressor
 
-lgb_base = lgb.LGBMRegressor(n_estimators=200, max_depth=5, learning_rate=0.05,
+lgb_base = lgb.LGBMRegressor(n_estimators=100, max_depth=4, learning_rate=0.05,
                               n_jobs=-1, random_state=42, verbosity=-1)
 lgb_model = MultiOutputRegressor(lgb_base, n_jobs=-1)
 lgb_model.fit(X_train_arr, Y_train_arr)
@@ -167,17 +167,21 @@ def diebold_mariano(e1, e2, h=1):
     n = len(d)
     d_mean = d.mean()
     gamma_0 = np.var(d, ddof=0)
-    # HAC variance for h-step ahead
+    # HAC variance (Newey-West / Bartlett kernel)
     gamma_sum = 0
     for k in range(1, h):
+        w_k = 1 - k / h  # Bartlett kernel weight
         gamma_k = np.mean((d[k:] - d_mean) * (d[:-k] - d_mean))
-        gamma_sum += gamma_k
+        gamma_sum += w_k * gamma_k
     var_d = (gamma_0 + 2 * gamma_sum) / n
     if var_d <= 0:
         var_d = gamma_0 / n
     dm_stat = d_mean / np.sqrt(var_d)
-    p_value = 2 * (1 - stats.norm.cdf(abs(dm_stat)))
-    return dm_stat, p_value
+    # Harvey et al. (1997) small-sample correction
+    harvey_factor = np.sqrt((n + 1 - 2 * h + h * (h - 1) / n) / n)
+    dm_corrected = dm_stat * harvey_factor
+    p_value = 2 * stats.t.sf(abs(dm_corrected), df=n - 1)
+    return dm_corrected, p_value
 
 model_names = ["Zero", "Naive", "ARIMA", "XGBoost", "LightGBM", "LSTM"]
 model_errors = {

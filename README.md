@@ -30,13 +30,12 @@ Comparer plusieurs approches (dont les modeles de diffusion CSDI) pour :
 ├── 02_log_rendements_split.py   # Log-rendements, split, normalisation
 ├── 03_exchange_rate_prep.py     # EDA Exchange Rate (figures 10-13)
 ├── 04_prepare_csdi_data.py      # Conversion en format CSDI (pickle)
-├── 05_run_csdi_exchange_rate.py # CSDI sur Exchange Rate (figure 14)
-├── 05c_csdi_figure.py           # Generation figure 15 standalone
+├── 05_run_csdi_exchange_rate.py # CSDI sur Exchange Rate (figure 14-15)
 ├── 06_baselines_forecasting.py  # 6 baselines + zero (figures 16-17)
-├── 07_baselines_imputation.py   # Baselines imputation (zero, interpolation)
+├── 07_baselines_imputation.py   # Baselines imputation (zero, interpolation, gaussienne cond.)
 ├── 07_shap_interpretabilite.py  # SHAP XGBoost/LightGBM (figures 18-22)
 ├── 08_run_csdi_yahoo.py         # CSDI sur Yahoo Finance (figures 23-25)
-├── 09_diebold_mariano.py        # Test statistique DM (figure 26)
+├── 09_diebold_mariano.py        # Test statistique DM avec correction HAC (figure 26)
 ├── app.py                       # Application Streamlit interactive
 ├── telecharger_brut.py          # Telechargement donnees Yahoo
 ├── CSDI/                        # Code source CSDI (Tashiro et al.)
@@ -49,6 +48,7 @@ Comparer plusieurs approches (dont les modeles de diffusion CSDI) pour :
 ├── results/
 │   ├── figures/                 # 26 figures PNG
 │   ├── baselines_results.json
+│   ├── baselines_imputation.json
 │   └── diebold_mariano.json
 └── requirements.txt
 ```
@@ -62,25 +62,12 @@ L'application interactive comprend 9 pages :
 | Accueil | Presentation du projet et de la methodologie |
 | Donnees Yahoo Finance | EDA : prix, log-rendements, correlations, split temporel |
 | Donnees Exchange Rate | EDA : series, correlations, normalisation |
-| Baselines (Prevision) | Resultats des 5 modeles de reference |
+| Baselines (Prevision) | Resultats des 6 modeles de reference (incluant le zero) |
 | CSDI — Imputation | Resultats d'imputation avec courbes d'apprentissage |
 | Interpretabilite SHAP | Analyse SHAP : importance globale, par serie, par lag |
 | Comparaison globale | Synthese + test de Diebold-Mariano |
 | **Prevision interactive** | Prevision en prix reels avec intervalles de confiance (IC 80%) et explication SHAP |
 | **Imputation interactive** | Imputation CSDI en temps reel avec choix du masquage |
-
-### Prevision interactive
-
-- **2 modes** : backtest sur donnees passees ou prevision future (5 prochains jours)
-- **Prix reels** : conversion des log-rendements en prix (ex: "S&P 500 : 7623$")
-- **Intervalles de confiance** : regression quantile (quantiles 10%/50%/90%) pour XGBoost et LightGBM
-- **Explication SHAP** : pour chaque prevision, decomposition des contributions par serie et par lag
-
-### Imputation interactive
-
-- Choix du dataset, taux de masquage (10/30/50%) et type (aleatoire/bloc)
-- Le modele CSDI charge depuis le disque impute en direct (10 echantillons, 50 pas de diffusion)
-- Affichage avec intervalles de confiance (quantiles 10%-90% des echantillons)
 
 ## Modeles compares
 
@@ -90,16 +77,17 @@ L'application interactive comprend 9 pages :
 | Naive (derniere valeur) | Baseline | Prevision | Non |
 | ARIMA(1,0,0) | Classique | Prevision | Non |
 | Interpolation lineaire | Baseline | Imputation | Non |
+| Gaussienne conditionnelle | Baseline | Imputation | Non |
 | XGBoost (100 arbres) | ML | Prevision | Oui (regression quantile) |
 | LightGBM (100 arbres) | ML | Prevision | Oui (regression quantile) |
 | LSTM (64h, 2 couches) | Deep Learning | Prevision | Non |
-| **CSDI** | **Diffusion** | **Imputation + Prevision** | **Oui (echantillonnage natif)** |
+| **CSDI** | **Diffusion** | **Imputation** | **Oui (echantillonnage natif)** |
 
 ## Metriques
 
 - **CRPS** : metrique principale probabiliste (plus bas = meilleur)
 - **MAE, RMSE** : erreur ponctuelle
-- **Test de Diebold-Mariano** : significativite statistique des differences
+- **Test de Diebold-Mariano** : significativite statistique (correction HAC Newey-West + Harvey et al. 1997)
 
 ## Resultats cles
 
@@ -107,39 +95,52 @@ L'application interactive comprend 9 pages :
 
 | Modele | MAE | RMSE |
 |--------|-----|------|
-| LightGBM | 0.663 | 0.940 |
-| XGBoost | 0.664 | 0.942 |
+| **Zero** | **0.650** | **0.926** |
+| LightGBM | 0.663 | 0.939 |
+| XGBoost | 0.664 | 0.941 |
 | LSTM | 0.667 | 0.946 |
 | ARIMA | 0.674 | 0.955 |
 | Naive | 0.944 | 1.320 |
+
+Aucun modele appris ne bat le zero (+1.9% a +45%). Resultat coherent avec l'absence d'autocorrelation des log-rendements (Cont, 2001).
 
 ### CSDI Imputation (Exchange Rate)
 
 | Masquage | RMSE | MAE | CRPS |
 |----------|------|-----|------|
-| 10% aleatoire | 0.0040 | 0.0020 | 0.0022 |
-| 50% bloc | 0.0206 | 0.0117 | 0.0129 |
+| 10% aleatoire | 0.0030 | 0.0017 | 0.0019 |
+| 30% aleatoire | 0.0035 | 0.0019 | 0.0022 |
+| 50% aleatoire | 0.0041 | 0.0023 | 0.0026 |
+| 10% bloc | 0.0073 | 0.0045 | 0.0051 |
+| 30% bloc | 0.0126 | 0.0078 | 0.0088 |
+| 50% bloc | 0.0154 | 0.0096 | 0.0107 |
+
+CSDI bat l'interpolation en masquage aleatoire ; l'interpolation reprend l'avantage en bloc.
 
 ### CSDI Imputation (Yahoo Finance)
 
 | Masquage | RMSE | MAE | CRPS |
 |----------|------|-----|------|
-| 10% aleatoire | 0.0167 | 0.0094 | 0.0066 |
-| 50% bloc | 0.0226 | 0.0126 | 0.0090 |
+| 10% aleatoire | 0.0198 | 0.0110 | 0.0076 |
+| 30% aleatoire | 0.0205 | 0.0113 | 0.0078 |
+| 50% aleatoire | 0.0220 | 0.0118 | 0.0083 |
+| 10% bloc | 0.0276 | 0.0140 | 0.0101 |
+| 30% bloc | 0.0280 | 0.0142 | 0.0103 |
+| 50% bloc | 0.0284 | 0.0142 | 0.0103 |
 
-Le masquage bloc est plus difficile que l'aleatoire. Sur Yahoo (log-rendements), CSDI surpasse le baseline zero ; sur Exchange Rate (donnees lisses), l'interpolation lineaire est competitive.
+En masquage aleatoire, CSDI bat le zero (0.0198 vs 0.0268). En masquage bloc, le zero reprend l'avantage (0.0265 vs 0.0276).
 
 ### Interpretabilite SHAP
-Exxon est la serie la plus influente pour predire le S&P 500, suivie d'Apple et JPMorgan. Les lags recents (t-1, t-2) dominent.
+
+JPMorgan_t-14 est la feature la plus influente (XGBoost), suivie d'Exxon et Apple. Profil des lags non monotone avec pic a t-7. Les classements divergent entre XGBoost et LightGBM. Ces modeles ne battant pas le zero, SHAP explique principalement du bruit.
 
 ### Test de Diebold-Mariano
-Le test DM compare toutes les paires de modeles (incluant Zero et ARIMA) avec correction HAC.
+
+Test DM avec correction HAC (noyau de Bartlett / Newey-West) et correction petits echantillons (Harvey et al. 1997). Zero vs XGBoost : non significatif. Zero vs LightGBM : zero significativement meilleur.
 
 ## Installation et execution
 
 ```bash
-git clone https://github.com/Jacquel-SANOU/ml-diffusion-timeseries-ecc.git
-cd ml-diffusion-timeseries-ecc
 pip install -r requirements.txt
 
 # Lancer l'application Streamlit
@@ -162,3 +163,6 @@ python 09_diebold_mariano.py
 
 - Tashiro et al., "CSDI: Conditional Score-based Diffusion Models for Probabilistic Time Series Imputation", NeurIPS 2021
 - Ho et al., "Denoising Diffusion Probabilistic Models", NeurIPS 2020
+- Cont, "Empirical properties of asset returns: stylized facts and statistical issues", 2001
+- Newey & West, "A Simple, Positive Semi-definite, Heteroskedasticity and Autocorrelation Consistent Covariance Matrix", Econometrica 1987
+- Harvey, Leybourne & Newbold, "Testing the equality of prediction mean squared errors", IJOF 1997

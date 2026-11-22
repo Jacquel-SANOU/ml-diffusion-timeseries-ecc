@@ -70,6 +70,28 @@ def impute_interpolation(observed, obs_mask, gt_mask):
     return imputed, target_mask
 
 
+def impute_gaussian_conditional(observed, obs_mask, gt_mask, cov_matrix):
+    """Gaussian conditional: E[x_missing | x_observed] using train covariance."""
+    target_mask = obs_mask - gt_mask
+    imputed = observed.copy()
+    n_time, n_feat = observed.shape
+    for t in range(n_time):
+        obs_idx = np.where(gt_mask[t] > 0)[0]
+        miss_idx = np.where(target_mask[t] > 0)[0]
+        if len(miss_idx) == 0:
+            continue
+        if len(obs_idx) == 0:
+            imputed[t, miss_idx] = 0.0
+            continue
+        sigma_mo = cov_matrix[np.ix_(miss_idx, obs_idx)]
+        sigma_oo = cov_matrix[np.ix_(obs_idx, obs_idx)]
+        try:
+            imputed[t, miss_idx] = sigma_mo @ np.linalg.solve(sigma_oo, observed[t, obs_idx])
+        except np.linalg.LinAlgError:
+            imputed[t, miss_idx] = 0.0
+    return imputed, target_mask
+
+
 def calc_metrics_numpy(imputed, true_data, target_mask, mean_data, std_data):
     true_orig = true_data * std_data + mean_data
     imp_orig = imputed * std_data + mean_data
@@ -91,6 +113,11 @@ def evaluate_baselines(data_folder, split_info, dataset_name):
 
     norm_data = (main_data - mean_data) / std_data
 
+    # Train covariance for gaussian conditional baseline
+    train_end = split_info.get("train_end", split_info["test_start"])
+    train_norm = norm_data[:train_end]
+    cov_matrix = np.cov(train_norm.T)
+
     start_test, end_test = split_info["test_start"], split_info["test_end"]
     windows = create_test_windows(norm_data, mask_data, start_test, end_test, SEQ_LENGTH)
     print(f"\n  {dataset_name} : {len(windows)} fenetres de test")
@@ -102,6 +129,7 @@ def evaluate_baselines(data_folder, split_info, dataset_name):
 
             all_zero_rmse, all_zero_mae = [], []
             all_interp_rmse, all_interp_mae = [], []
+            all_gauss_rmse, all_gauss_mae = [], []
 
             for observed, obs_mask in windows:
                 gt_mask = apply_mask(obs_mask, ratio, mtype, SEQ_LENGTH)
@@ -116,13 +144,20 @@ def evaluate_baselines(data_folder, split_info, dataset_name):
                 all_interp_rmse.append(rmse_i)
                 all_interp_mae.append(mae_i)
 
+                imp_gauss, tmask = impute_gaussian_conditional(observed, obs_mask, gt_mask, cov_matrix)
+                rmse_g, mae_g = calc_metrics_numpy(imp_gauss, observed, tmask, mean_data, std_data)
+                all_gauss_rmse.append(rmse_g)
+                all_gauss_mae.append(mae_g)
+
             results[key] = {
                 "Zero": {"RMSE": float(np.mean(all_zero_rmse)), "MAE": float(np.mean(all_zero_mae))},
                 "Interpolation": {"RMSE": float(np.mean(all_interp_rmse)), "MAE": float(np.mean(all_interp_mae))},
+                "Gaussian_conditional": {"RMSE": float(np.mean(all_gauss_rmse)), "MAE": float(np.mean(all_gauss_mae))},
             }
             print(f"    {key}")
             print(f"      Zero          RMSE={results[key]['Zero']['RMSE']:.6f}  MAE={results[key]['Zero']['MAE']:.6f}")
             print(f"      Interpolation RMSE={results[key]['Interpolation']['RMSE']:.6f}  MAE={results[key]['Interpolation']['MAE']:.6f}")
+            print(f"      Gauss. cond.  RMSE={results[key]['Gaussian_conditional']['RMSE']:.6f}  MAE={results[key]['Gaussian_conditional']['MAE']:.6f}")
 
     return results
 

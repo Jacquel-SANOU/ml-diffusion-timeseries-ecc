@@ -204,8 +204,9 @@ elif page == "CSDI — Imputation":
             st.markdown("""
             **Observations** :
             - Le masquage **bloc** est plus difficile que le masquage **aleatoire**
-            - CSDI bat l'interpolation lineaire en masquage aleatoire sur Exchange Rate
-            - En masquage bloc, l'interpolation reprend l'avantage (series lisses, voisins fiables)
+            - CSDI bat toutes les baselines en masquage aleatoire sur Exchange Rate
+            - Sur Yahoo, la gaussienne conditionnelle bat CSDI en aleatoire (correlations inter-series)
+            - En masquage bloc, le zero reprend l'avantage sur Yahoo, l'interpolation sur Exchange Rate
             """)
 
         show_figure("15_csdi_imputation_exemple.png",
@@ -331,8 +332,8 @@ elif page == "Comparaison globale":
     | Aspect | Observation |
     |--------|-------------|
     | **Baselines prevision** | Le predicteur zero (moyenne) bat tous les modeles appris en MAE |
-    | **CSDI imputation (Yahoo)** | Surpasse le zero et l'interpolation lineaire |
-    | **CSDI imputation (Exch. Rate)** | Surpasse le zero et l'interpolation en aleatoire, pas en bloc |
+    | **CSDI imputation (Yahoo)** | Bat zero et interpolation en aleatoire, mais pas la gaussienne conditionnelle ; en bloc le zero gagne |
+    | **CSDI imputation (Exch. Rate)** | Bat toutes les baselines en aleatoire ; en bloc l'interpolation reprend l'avantage |
     | **Bloc vs Aleatoire** | Masquage bloc plus difficile (pas de voisins proches) |
     | **Interpretabilite** | Importance SHAP repartie, ecarts faibles entre series — explique surtout du bruit |
     | **Approche probabiliste** | CSDI quantifie l'incertitude via echantillonnage (couverture a mesurer) |

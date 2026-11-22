@@ -910,25 +910,30 @@ Les IC \`a 80\% affich\'es sur les figures~\ref{fig:csdi_imputation_er} et~\ref{
 \centering
 \caption{Baselines d'imputation --- Comparaison avec CSDI}
 \label{tab:imputation_baselines}
-\begin{tabular}{llcc}
+\begin{tabular}{llcccccc}
 \toprule
-\textbf{Dataset} & \textbf{M\'ethode} & \textbf{RMSE (30\% al\'eat.)} & \textbf{MAE (30\% al\'eat.)} \\
+ & & \multicolumn{3}{c}{\textbf{Masquage al\'eatoire (RMSE)}} & \multicolumn{3}{c}{\textbf{Masquage bloc (RMSE)}} \\
+\cmidrule(lr){3-5} \cmidrule(lr){6-8}
+\textbf{Dataset} & \textbf{M\'ethode} & \textbf{10\%} & \textbf{30\%} & \textbf{50\%} & \textbf{10\%} & \textbf{30\%} & \textbf{50\%} \\
 \midrule
-\multirow{3}{*}{Exchange Rate}
-  & Z\'ero (moyenne) & 0.1228 & 0.0847 \\
-  & Interpolation lin. & 0.0040 & 0.0023 \\
-  & \textbf{CSDI} & \textbf{0.0035} & \textbf{0.0019} \\
+\multirow{4}{*}{Exchange Rate}
+  & Z\'ero & 0.1222 & 0.1228 & 0.1227 & 0.1226 & 0.1226 & 0.1227 \\
+  & Interpolation & 0.0035 & 0.0040 & 0.0045 & \textbf{0.0062} & \textbf{0.0108} & \textbf{0.0133} \\
+  & Gauss. cond.$^\dagger$ & 0.0802 & 0.0982 & 0.1149 & $\equiv$ z\'ero & $\equiv$ z\'ero & $\equiv$ z\'ero \\
+  & \textbf{CSDI} & \textbf{0.0030} & \textbf{0.0035} & \textbf{0.0041} & 0.0073 & 0.0126 & 0.0154 \\
 \midrule
-\multirow{3}{*}{Yahoo Finance}
-  & Z\'ero (moyenne) & 0.0275 & 0.0136 \\
-  & Interpolation lin. & 0.0353 & 0.0176 \\
-  & \textbf{CSDI} & \textbf{0.0205} & \textbf{0.0113} \\
+\multirow{4}{*}{Yahoo Finance}
+  & Z\'ero & 0.0268 & 0.0275 & 0.0277 & \textbf{0.0265} & \textbf{0.0269} & \textbf{0.0276} \\
+  & Interpolation & 0.0341 & 0.0353 & 0.0356 & 0.0337 & 0.0347 & 0.0354 \\
+  & \textbf{Gauss. cond.}$^\dagger$ & \textbf{0.0188} & \textbf{0.0199} & \textbf{0.0216} & $\equiv$ z\'ero & $\equiv$ z\'ero & $\equiv$ z\'ero \\
+  & CSDI & 0.0198 & 0.0205 & 0.0220 & 0.0276 & 0.0280 & 0.0284 \\
 \bottomrule
+\multicolumn{8}{l}{\footnotesize $^\dagger$ En masquage bloc, toutes les s\'eries sont masqu\'ees simultan\'ement : la gaussienne d\'eg\'en\`ere en z\'ero.}
 \end{tabular}
 \end{table}
 
 \begin{remarque}[Interpr\'etation des baselines]
-Sur Exchange Rate (donn\'ees brutes normalis\'ees), CSDI bat l'interpolation lin\'eaire en masquage al\'eatoire (RMSE 0.0035 vs 0.0040) mais l'interpolation reprend l'avantage en masquage bloc (s\'eries lisses, voisins fiables). Sur Yahoo Finance (log-rendements normalis\'es, centr\'es en 0), le baseline z\'ero est meilleur que l'interpolation car les log-rendements sont quasi-stationnaires. CSDI am\'eliore significativement le z\'ero sur Yahoo (RMSE 0.0205 vs 0.0275).
+Sur Exchange Rate (donn\'ees brutes normalis\'ees), CSDI bat toutes les baselines en masquage al\'eatoire (RMSE 0.0035 vs interpolation 0.0040) ; la gaussienne conditionnelle est peu performante ici (RMSE $>$ 0.08) car les taux de change non centr\'es sont mal approch\'es par la moyenne conditionnelle. En masquage bloc, l'interpolation reprend l'avantage (s\'eries lisses, voisins fiables). Sur Yahoo Finance (log-rendements centr\'es en 0), la gaussienne conditionnelle bat CSDI en masquage al\'eatoire (RMSE 0.0188 vs 0.0198 \`a 10\,\%) gr\^ace aux corr\'elations inter-s\'eries ; CSDI bat n\'eanmoins le z\'ero et l'interpolation. En masquage bloc, le z\'ero reprend l'avantage (RMSE 0.0265--0.0276 vs CSDI 0.0276--0.0284) ; la gaussienne d\'eg\'en\`ere en z\'ero car toutes les s\'eries sont masqu\'ees simultan\'ement.
 \end{remarque}
 
 \begin{figure}[H]
@@ -1004,11 +1009,11 @@ Le test de Diebold-Mariano est appliqu\'e \`a toutes les paires de 6 mod\`eles (
 
 \textbf{Interpr\'etation :} Le test DM avec correction HAC (Newey-West) r\'ev\`ele que :
 \begin{itemize}
-    \item Le baseline z\'ero et XGBoost ne sont \textbf{pas significativement diff\'erents} (DM $= -1.38$, $p > 0.1$), confirmant que sur des log-rendements normalis\'es centr\'es, pr\'edire z\'ero est une strat\'egie comp\'etitive.
-    \item LightGBM est significativement \textbf{moins bon} que le z\'ero (DM $= -7.03$, $p < 0.01$), sugg\'erant un l\'eger sur-apprentissage.
-    \item ARIMA (refitt\'e par fen\^etre) est significativement inf\'erieur au z\'ero (DM $= -4.96$, $p < 0.01$).
-    \item Le baseline na\"if (derni\`ere valeur) est significativement pire que tous les autres mod\`eles ($|$DM$| > 9$, $p < 0.01$).
-    \item LightGBM surpasse significativement ARIMA (DM $= -1.78$, $p < 0.1$) mais pas XGBoost.
+    \item Le baseline z\'ero et XGBoost ne sont \textbf{pas significativement diff\'erents} (DM $= -0.22$, $p > 0.1$), confirmant que sur des log-rendements normalis\'es centr\'es, pr\'edire z\'ero est une strat\'egie comp\'etitive.
+    \item LightGBM est significativement \textbf{moins bon} que le z\'ero (DM $= -5.03$, $p < 0.01$), sugg\'erant un l\'eger sur-apprentissage.
+    \item ARIMA (refitt\'e par fen\^etre) est significativement inf\'erieur au z\'ero (DM $= -5.18$, $p < 0.01$).
+    \item Le baseline na\"if (derni\`ere valeur) est significativement pire que tous les autres mod\`eles ($|$DM$| > 10$, $p < 0.01$).
+    \item LightGBM surpasse significativement ARIMA (DM $= -3.76$, $p < 0.01$) mais est significativement inf\'erieur \`a XGBoost (DM $= 5.90$, $p < 0.01$).
 \end{itemize}
 
 % ══════════════════════════════════════════════════════════
@@ -1033,7 +1038,7 @@ Le test de Diebold-Mariano est appliqu\'e \`a toutes les paires de 6 mod\`eles (
     \item \textbf{Interpr\'etabilit\'e} : le processus de diffusion est opaque --- SHAP ne peut pas \^etre appliqu\'e directement au d\'ebruitage it\'eratif, contrairement aux mod\`eles \`a base d'arbres
     \item \textbf{Pr\'evision non r\'ealis\'ee} : l'objectif de pr\'evision probabiliste par diffusion (formuler la pr\'evision comme imputation des positions futures) n'a pas \'et\'e impl\'ement\'e dans ce projet. Seule l'imputation est \'evalu\'ee pour CSDI
     \item \textbf{Calibration non v\'erifi\'ee} : la couverture empirique des IC \`a 80\% et leur largeur moyenne n'ont pas \'et\'e mesur\'ees, emp\^echant une \'evaluation rigoureuse de la qualit\'e des intervalles
-    \item \textbf{Hypoth\`eses sur les manquants} : notre \'evaluation simule des manquants MCAR (al\'eatoire) et approximativement MNAR (bloc), mais ne teste pas le m\'ecanisme MAR, plus r\'ealiste pour les donn\'ees financi\`eres
+    \item \textbf{Hypoth\`eses sur les manquants} : notre \'evaluation simule des manquants MCAR (al\'eatoire) et MCAR structur\'e (bloc contigu mais ind\'ependant des valeurs), mais ne teste pas les m\'ecanismes MAR ou MNAR, plus r\'ealistes pour les donn\'ees financi\`eres
     \item \textbf{Queues \'epaisses non mod\'elis\'ees} : CSDI suppose implicitement un bruit gaussien lors de la diffusion. Les queues \'epaisses des rendements financiers pourraient n\'ecessiter des distributions alternatives (Student-$t$)
 \end{enumerate}
 
@@ -1068,7 +1073,7 @@ Ce projet a explor\'e l'application des mod\`eles de diffusion conditionnels (CS
     \item Une application Streamlit interactive pour la d\'emonstration
 \end{itemize}
 
-Les r\'esultats montrent que CSDI bat le z\'ero et l'interpolation lin\'eaire sur Yahoo Finance (log-rendements volatils, RMSE 0.0205 vs z\'ero 0.0275) \textbf{et} l'interpolation sur Exchange Rate en masquage al\'eatoire (RMSE 0.0035 vs interpolation 0.0040). En masquage bloc \`a 30\%, l'interpolation reprend l'avantage sur Exchange Rate (0.0108 vs CSDI 0.0126), montrant que CSDI excelle sur les masquages dispers\'es mais p\^atit des longues lacunes sur des s\'eries lisses.
+Les r\'esultats montrent que CSDI excelle en masquage al\'eatoire : il bat le z\'ero et l'interpolation sur Yahoo Finance (RMSE 0.0205 vs z\'ero 0.0275) et toutes les baselines sur Exchange Rate (RMSE 0.0035 vs interpolation 0.0040). Cependant, la gaussienne conditionnelle --- une baseline sans apprentissage --- bat CSDI sur Yahoo en masquage al\'eatoire (RMSE 0.0188 vs 0.0198) en exploitant les corr\'elations inter-s\'eries. En masquage bloc, le z\'ero reprend l'avantage sur Yahoo (RMSE 0.0265--0.0276 vs CSDI 0.0276--0.0284) et l'interpolation sur Exchange Rate (0.0108 vs 0.0126), montrant que CSDI excelle sur les masquages dispers\'es mais p\^atit des longues lacunes.
 
 \textbf{Limites principales :} l'objectif de pr\'evision probabiliste par diffusion n'a pas \'et\'e r\'ealis\'e (seule l'imputation est \'evalu\'ee pour CSDI), la calibration des intervalles de confiance n'a pas \'et\'e v\'erifi\'ee empiriquement, et les queues \'epaisses des distributions financi\`eres ne sont pas mod\'elis\'ees explicitement.
 
