@@ -95,11 +95,11 @@ L'application interactive comprend 9 pages :
 
 | Modele | MAE | RMSE |
 |--------|-----|------|
-| **Zero** | **0.650** | **0.926** |
-| LightGBM | 0.663 | 0.939 |
-| XGBoost | 0.664 | 0.941 |
-| LSTM | 0.667 | 0.946 |
-| ARIMA | 0.674 | 0.955 |
+| **Zero** | **0.650** | **0.928** |
+| LightGBM | 0.663 | 0.940 |
+| XGBoost | 0.664 | 0.942 |
+| LSTM | 0.667 | 0.947 |
+| ARIMA | 0.678 | 0.964 |
 | Naive | 0.944 | 1.320 |
 
 Aucun modele appris ne bat le zero (+1.9% a +45%). Resultat coherent avec l'absence d'autocorrelation des log-rendements (Cont, 2001).
