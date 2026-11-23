@@ -87,6 +87,7 @@ L'application interactive comprend 9 pages :
 
 - **CRPS** : metrique principale probabiliste (plus bas = meilleur)
 - **MAE, RMSE** : erreur ponctuelle
+- **Couverture IC 80%** : proportion des vraies valeurs dans [q10, q90] (cible = 80%)
 - **Test de Diebold-Mariano** : significativite statistique (correction HAC Newey-West + Harvey et al. 1997)
 
 ## Resultats cles
@@ -129,6 +130,14 @@ CSDI bat l'interpolation en masquage aleatoire ; l'interpolation reprend l'avant
 | 50% bloc | 0.0284 | 0.0142 | 0.0103 |
 
 En masquage aleatoire, CSDI bat le zero (0.0198 vs 0.0268). En masquage bloc, le zero reprend l'avantage (0.0265 vs 0.0276).
+
+### Couverture IC 80% (calibration)
+
+Couverture empirique des intervalles a 80% (cible : 80%, N_SAMPLES=10) :
+- Exchange Rate : 50–57% selon la configuration
+- Yahoo Finance : 54–61% selon la configuration
+
+Le modele est sous-dispersif : les intervalles predits sont trop etroits. Cela est en partie du au nombre limite d'echantillons (10).
 
 ### Interpretabilite SHAP
 

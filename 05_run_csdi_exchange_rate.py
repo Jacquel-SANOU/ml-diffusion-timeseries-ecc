@@ -257,34 +257,41 @@ class CSDI_ExchangeRate(nn.Module):
 # METRIQUES
 # =====================================================================
 def calc_metrics(samples, target, target_mask, mean_data, std_data):
-    """Calcule RMSE, MAE et CRPS sur les points masques."""
+    """Calcule RMSE, MAE, CRPS, couverture IC 80% et largeur moyenne IC."""
     median_pred = samples.median(dim=1).values
 
     target_orig = target * std_data + mean_data
     median_orig = median_pred * std_data + mean_data
+    samples_orig = samples * std_data.unsqueeze(1) + mean_data.unsqueeze(1)
 
     diff = (median_orig - target_orig) * target_mask
     n_eval = target_mask.sum().item()
     if n_eval == 0:
-        return 0, 0, 0
+        return 0, 0, 0, 0, 0
 
     mse = (diff ** 2).sum().item() / n_eval
     mae = diff.abs().sum().item() / n_eval
     rmse = np.sqrt(mse)
+
+    q10 = torch.quantile(samples_orig, 0.1, dim=1)
+    q90 = torch.quantile(samples_orig, 0.9, dim=1)
+    in_interval = ((target_orig >= q10) & (target_orig <= q90)).float() * target_mask
+    coverage = in_interval.sum().item() / n_eval if n_eval > 0 else 0
+    width = ((q90 - q10) * target_mask).sum().item() / n_eval if n_eval > 0 else 0
 
     quantiles = np.arange(0.05, 1.0, 0.05)
     crps = 0
     denom = (target_orig.abs() * target_mask).sum().item()
     if denom > 0:
         for q in quantiles:
-            q_pred = torch.quantile(samples * std_data + mean_data, q, dim=1)
+            q_pred = torch.quantile(samples_orig, q, dim=1)
             q_loss = 2 * torch.sum(
                 torch.abs((q_pred - target_orig) * target_mask * ((target_orig <= q_pred).float() - q))
             ).item()
             crps += q_loss / denom
         crps /= len(quantiles)
 
-    return rmse, mae, crps
+    return rmse, mae, crps, coverage, width
 
 
 # =====================================================================
@@ -457,23 +464,30 @@ if __name__ == "__main__":
             )
             test_loader = DataLoader(test_ds, batch_size=4, shuffle=False)
 
-            all_rmse, all_mae, all_crps = [], [], []
+            all_rmse, all_mae, all_crps, all_cov, all_width = [], [], [], [], []
 
             for batch_idx, batch in enumerate(test_loader):
                 samples, target, target_mask, obs_mask = model.evaluate_batch(batch, N_SAMPLES)
-                rmse, mae, crps = calc_metrics(samples, target, target_mask, mean_t, std_t)
+                rmse, mae, crps, cov, width = calc_metrics(samples, target, target_mask, mean_t, std_t)
                 all_rmse.append(rmse)
                 all_mae.append(mae)
                 all_crps.append(crps)
+                all_cov.append(cov)
+                all_width.append(width)
 
             avg_rmse = np.mean(all_rmse)
             avg_mae = np.mean(all_mae)
             avg_crps = np.mean(all_crps)
+            avg_cov = np.mean(all_cov)
+            avg_width = np.mean(all_width)
 
-            results_all[key] = {"RMSE": avg_rmse, "MAE": avg_mae, "CRPS": avg_crps}
+            results_all[key] = {"RMSE": avg_rmse, "MAE": avg_mae, "CRPS": avg_crps,
+                                "Coverage_80": avg_cov, "IC_width": avg_width}
             print(f"    RMSE  = {avg_rmse:.6f}")
             print(f"    MAE   = {avg_mae:.6f}")
             print(f"    CRPS  = {avg_crps:.6f}")
+            print(f"    Couv. IC 80% = {avg_cov:.4f}  ({avg_cov*100:.1f}%)")
+            print(f"    Largeur IC   = {avg_width:.6f}")
 
     # --- Sauvegarder les resultats ---
     with open(os.path.join(save_folder, "results_imputation.json"), "w") as f:

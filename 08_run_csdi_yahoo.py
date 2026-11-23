@@ -233,7 +233,14 @@ def calc_metrics(samples, target, target_mask, mean_data, std_data):
     if n_samples > 1:
         spread /= (n_samples * (n_samples - 1) / 2)
     crps = crps_term1 - 0.5 * spread
-    return rmse, mae, crps
+    # Coverage and width of 80% CI
+    q10 = torch.quantile(samples_orig, 0.1, dim=1)
+    q90 = torch.quantile(samples_orig, 0.9, dim=1)
+    in_interval = ((target_orig >= q10) & (target_orig <= q90)).float()
+    n_eval = mask.sum().item()
+    coverage = (in_interval * target_mask).sum().item() / n_eval if n_eval > 0 else 0
+    width = ((q90 - q10) * target_mask).sum().item() / n_eval if n_eval > 0 else 0
+    return rmse, mae, crps, coverage, width
 
 
 # ── Training ────────────────────────────────────────────
@@ -362,25 +369,31 @@ if __name__ == "__main__":
                                    mask_type=mtype)
             test_loader = DataLoader(test_ds, batch_size=8, shuffle=False, num_workers=0)
 
-            all_rmse, all_mae, all_crps = [], [], []
+            all_rmse, all_mae, all_crps, all_cov, all_width = [], [], [], [], []
             for bi, batch in enumerate(test_loader):
                 samples, target, target_mask, obs_mask = model.evaluate_batch(batch, N_SAMPLES)
-                rmse, mae, crps = calc_metrics(
+                rmse, mae, crps, cov, width = calc_metrics(
                     samples, target, target_mask, mean_data, std_data
                 )
                 all_rmse.append(rmse)
                 all_mae.append(mae)
                 all_crps.append(crps)
+                all_cov.append(cov)
+                all_width.append(width)
 
             results[key] = {
                 "RMSE": float(np.mean(all_rmse)),
                 "MAE": float(np.mean(all_mae)),
                 "CRPS": float(np.mean(all_crps)),
+                "Coverage_80": float(np.mean(all_cov)),
+                "IC_width": float(np.mean(all_width)),
             }
             print(f"\n  Test : masquage {key}")
             print(f"    RMSE  = {results[key]['RMSE']:.6f}")
             print(f"    MAE   = {results[key]['MAE']:.6f}")
             print(f"    CRPS  = {results[key]['CRPS']:.6f}")
+            print(f"    Couv. IC 80% = {results[key]['Coverage_80']:.4f}  ({results[key]['Coverage_80']*100:.1f}%)")
+            print(f"    Largeur IC   = {results[key]['IC_width']:.6f}")
 
     with open(os.path.join(save_dir, "results_imputation.json"), "w") as f:
         json.dump(results, f, indent=2)

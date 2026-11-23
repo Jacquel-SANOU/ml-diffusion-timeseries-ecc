@@ -46,10 +46,10 @@
 \contentsline {subsection}{\numberline {4.1}Baselines --- Pr\'evision (Yahoo Finance)}{20}{subsection.4.1}%
 \contentsline {subsection}{\numberline {4.2}CSDI --- Imputation (Exchange Rate)}{22}{subsection.4.2}%
 \contentsline {subsection}{\numberline {4.3}CSDI --- Imputation (Yahoo Finance)}{23}{subsection.4.3}%
-\contentsline {subsection}{\numberline {4.4}Interpr\'etabilit\'e SHAP}{25}{subsection.4.4}%
-\contentsline {subsection}{\numberline {4.5}Test de Diebold-Mariano}{28}{subsection.4.5}%
-\contentsline {section}{\numberline {5}Discussion}{29}{section.5}%
-\contentsline {subsection}{\numberline {5.1}Avantages de l'approche CSDI}{29}{subsection.5.1}%
-\contentsline {subsection}{\numberline {5.2}Limites}{30}{subsection.5.2}%
-\contentsline {subsection}{\numberline {5.3}Comparaison des approches probabilistes}{30}{subsection.5.3}%
-\contentsline {section}{\numberline {6}Conclusion}{31}{section.6}%
+\contentsline {subsection}{\numberline {4.4}Interpr\'etabilit\'e SHAP}{26}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Test de Diebold-Mariano}{29}{subsection.4.5}%
+\contentsline {section}{\numberline {5}Discussion}{30}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Avantages de l'approche CSDI}{30}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Limites}{31}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Comparaison des approches probabilistes}{31}{subsection.5.3}%
+\contentsline {section}{\numberline {6}Conclusion}{32}{section.6}%

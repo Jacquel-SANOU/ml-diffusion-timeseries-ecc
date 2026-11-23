@@ -902,9 +902,38 @@ Les IC \`a 80\% affich\'es sur les figures~\ref{fig:csdi_imputation_er} et~\ref{
 \begin{itemize}
     \item Le masquage bloc est syst\'ematiquement plus difficile que le masquage al\'eatoire (l'interpolation lin\'eaire est moins efficace sans voisins proches)
     \item La performance se d\'egrade avec le taux de masquage, surtout en mode bloc
-    \item Le CRPS est inf\'erieur au MAE par construction math\'ematique (le second terme de l'\'equation~\eqref{eq:crps} est toujours positif), ce qui ne constitue \textbf{pas} une preuve de bonne calibration. Pour \'evaluer r\'eellement la calibration, il faudrait mesurer la \textbf{couverture empirique} des intervalles \`a 80\% (proportion des vraies valeurs tombant dans l'IC pr\'edit, attendue \`a 0.80) et la \textbf{largeur moyenne} des intervalles
+    \item Le CRPS est inf\'erieur au MAE par construction math\'ematique (le second terme de l'\'equation~\eqref{eq:crps} est toujours positif), ce qui ne constitue \textbf{pas} une preuve de bonne calibration. La \textbf{couverture empirique} des IC \`a 80\% (proportion des vraies valeurs dans $[q_{10}, q_{90}]$) a \'et\'e mesur\'ee : elle varie de 50\% \`a 61\% selon la configuration (Table~\ref{tab:coverage}), loin de la cible de 80\%, indiquant un mod\`ele \textbf{sous-dispersif} dont les intervalles sont trop \'etroits
     \item Ces r\'esultats doivent \^etre compar\'es aux baselines d'imputation (z\'ero et interpolation lin\'eaire) --- voir Table~\ref{tab:imputation_baselines}
 \end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{Couverture empirique des IC \`a 80\% (cible : 80\%) et largeur moyenne}
+\label{tab:coverage}
+\begin{tabular}{llcc}
+\toprule
+\textbf{Dataset} & \textbf{Masquage} & \textbf{Couverture (\%)} & \textbf{Largeur IC} \\
+\midrule
+\multirow{6}{*}{Exchange Rate}
+ & 10\% al\'eatoire & 57.1 & 0.0034 \\
+ & 30\% al\'eatoire & 56.5 & 0.0038 \\
+ & 50\% al\'eatoire & 54.3 & 0.0046 \\
+ & 10\% bloc & 52.8 & 0.0082 \\
+ & 30\% bloc & 50.4 & 0.0136 \\
+ & 50\% bloc & 54.3 & 0.0182 \\
+\midrule
+\multirow{6}{*}{Yahoo Finance}
+ & 10\% al\'eatoire & 60.6 & 0.0233 \\
+ & 30\% al\'eatoire & 59.3 & 0.0234 \\
+ & 50\% al\'eatoire & 57.8 & 0.0237 \\
+ & 10\% bloc & 57.0 & 0.0253 \\
+ & 30\% bloc & 55.2 & 0.0246 \\
+ & 50\% bloc & 54.3 & 0.0240 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La couverture moyenne est de $\sim$55\% (Exchange Rate) et $\sim$57\% (Yahoo), nettement inf\'erieure \`a la cible de 80\%. CSDI est donc \textbf{sous-dispersif} : les 10 trajectoires \'echantillonn\'ees ne couvrent pas suffisamment la variabilit\'e r\'eelle. Ce ph\'enom\`ene est classique pour un nombre limit\'e d'\'echantillons et pourrait s'am\'eliorer avec davantage de trajectoires (50 ou 100).
 
 \begin{table}[H]
 \centering
@@ -1037,7 +1066,7 @@ Le test de Diebold-Mariano est appliqu\'e \`a toutes les paires de 6 mod\`eles (
     \item \textbf{Entra\^inement} : 100 \'epoques ($\sim$30 minutes sur GPU RTX 4050), contre quelques secondes pour XGBoost/LightGBM
     \item \textbf{Interpr\'etabilit\'e} : le processus de diffusion est opaque --- SHAP ne peut pas \^etre appliqu\'e directement au d\'ebruitage it\'eratif, contrairement aux mod\`eles \`a base d'arbres
     \item \textbf{Pr\'evision non r\'ealis\'ee} : l'objectif de pr\'evision probabiliste par diffusion (formuler la pr\'evision comme imputation des positions futures) n'a pas \'et\'e impl\'ement\'e dans ce projet. Seule l'imputation est \'evalu\'ee pour CSDI
-    \item \textbf{Calibration non v\'erifi\'ee} : la couverture empirique des IC \`a 80\% et leur largeur moyenne n'ont pas \'et\'e mesur\'ees, emp\^echant une \'evaluation rigoureuse de la qualit\'e des intervalles
+    \item \textbf{Sous-dispersion des IC} : la couverture empirique des IC \`a 80\% n'atteint que 50--61\% selon la configuration (Table~\ref{tab:coverage}), indiquant que les intervalles pr\'edits sont trop \'etroits. Avec seulement 10 \'echantillons, les quantiles $q_{10}$ et $q_{90}$ sont estim\'es de mani\`ere bruit\'ee
     \item \textbf{Hypoth\`eses sur les manquants} : notre \'evaluation simule des manquants MCAR (al\'eatoire) et MCAR structur\'e (bloc contigu mais ind\'ependant des valeurs), mais ne teste pas les m\'ecanismes MAR ou MNAR, plus r\'ealistes pour les donn\'ees financi\`eres
     \item \textbf{Queues \'epaisses non mod\'elis\'ees} : CSDI suppose implicitement un bruit gaussien lors de la diffusion. Les queues \'epaisses des rendements financiers pourraient n\'ecessiter des distributions alternatives (Student-$t$)
 \end{enumerate}
@@ -1075,9 +1104,9 @@ Ce projet a explor\'e l'application des mod\`eles de diffusion conditionnels (CS
 
 Les r\'esultats montrent que CSDI excelle en masquage al\'eatoire : il bat le z\'ero et l'interpolation sur Yahoo Finance (RMSE 0.0205 vs z\'ero 0.0275) et toutes les baselines sur Exchange Rate (RMSE 0.0035 vs interpolation 0.0040). Cependant, la gaussienne conditionnelle --- une baseline sans apprentissage --- bat CSDI sur Yahoo en masquage al\'eatoire (RMSE 0.0188 vs 0.0198) en exploitant les corr\'elations inter-s\'eries. En masquage bloc, le z\'ero reprend l'avantage sur Yahoo (RMSE 0.0265--0.0276 vs CSDI 0.0276--0.0284) et l'interpolation sur Exchange Rate (0.0108 vs 0.0126), montrant que CSDI excelle sur les masquages dispers\'es mais p\^atit des longues lacunes.
 
-\textbf{Limites principales :} l'objectif de pr\'evision probabiliste par diffusion n'a pas \'et\'e r\'ealis\'e (seule l'imputation est \'evalu\'ee pour CSDI), la calibration des intervalles de confiance n'a pas \'et\'e v\'erifi\'ee empiriquement, et les queues \'epaisses des distributions financi\`eres ne sont pas mod\'elis\'ees explicitement.
+\textbf{Limites principales :} l'objectif de pr\'evision probabiliste par diffusion n'a pas \'et\'e r\'ealis\'e (seule l'imputation est \'evalu\'ee pour CSDI), les IC \`a 80\% sont sous-dispersifs (couverture empirique de 50--61\% au lieu de 80\%), et les queues \'epaisses des distributions financi\`eres ne sont pas mod\'elis\'ees explicitement.
 
-\textbf{Perspectives :} impl\'ementer la pr\'evision par diffusion (en masquant les positions futures), calculer la couverture empirique des IC, explorer des processus de diffusion \`a queues \'epaisses, et \'etendre l'\'evaluation \`a des m\'ecanismes de donn\'ees manquantes MAR.
+\textbf{Perspectives :} impl\'ementer la pr\'evision par diffusion (en masquant les positions futures), am\'eliorer la couverture des IC (augmenter le nombre d'\'echantillons, recalibration post-hoc), explorer des processus de diffusion \`a queues \'epaisses, et \'etendre l'\'evaluation \`a des m\'ecanismes de donn\'ees manquantes MAR.
 
 % ══════════════════════════════════════════════════════════
 % REFERENCES
